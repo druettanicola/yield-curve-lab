@@ -434,6 +434,30 @@ STR = {
 }
 
 
+def language_from_header(header: str) -> str:
+    """Sceglie 'it' o 'en' dall'intestazione Accept-Language del browser.
+
+    Il browser elenca le lingue preferite con un peso (q) da 0 a 1, per esempio
+    "it-IT,it;q=0.9,en;q=0.8". Si guarda la lingua col peso più alto (a parità, la prima):
+    italiano se è italiano, inglese in tutti gli altri casi (compresa un'intestazione vuota).
+    """
+    best_lang, best_q = "en", -1.0
+    for part in (header or "").split(","):
+        tag, _, params = part.strip().partition(";")
+        if not tag:
+            continue
+        q = 1.0
+        if params.strip().startswith("q="):
+            try:
+                q = float(params.strip()[2:])
+            except ValueError:
+                q = 0.0
+        if q > best_q:
+            best_q = q
+            best_lang = "it" if tag.strip().lower().split("-")[0] == "it" else "en"
+    return best_lang
+
+
 def translator(lang: str):
     """Restituisce la funzione t(chiave, **valori) per la lingua scelta ('en' o 'it')."""
     index = 1 if lang == "it" else 0

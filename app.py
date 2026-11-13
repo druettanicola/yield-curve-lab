@@ -19,7 +19,7 @@ from plotly.subplots import make_subplots
 import about
 import analysis as an
 import db
-from i18n import MONTHS, MONTHS_FULL, translator
+from i18n import MONTHS, MONTHS_FULL, language_from_header, translator
 
 st.set_page_config(page_title="Yield Curve Lab", page_icon="📈", layout="wide")
 
@@ -34,7 +34,7 @@ def pick_language() -> str:
                 header = st.context.headers.get("Accept-Language", "")
             except Exception:
                 header = ""
-            chosen = "it" if header.lower().startswith("it") else "en"
+            chosen = language_from_header(header)
         st.session_state["lang"] = chosen.upper()
     return st.session_state["lang"].lower()
 

@@ -3,7 +3,9 @@
 A macro dashboard built around the **U.S. Treasury yield curve**: 36 years of curves as a 3D surface,
 a recession-probability model, the real policy rate, and market-implied inflation expectations.
 
-**Live demo:** https://yield-curve-lab-druetta.streamlit.app/ (English) · https://yield-curve-lab-druetta.streamlit.app/?lang=it (Italiano)
+**Live demo:** https://yield-curve-lab-druetta.streamlit.app/
+
+The page opens in Italian or English depending on the visitor's browser language. Add `?lang=it` or `?lang=en` to the address to force one, or use the EN / IT switch at the top.
 
 ## What it covers
 
