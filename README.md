@@ -7,6 +7,14 @@ a recession-probability model, the real policy rate, and market-implied inflatio
 
 The page opens in Italian or English depending on the visitor's browser language. Add `?lang=it` or `?lang=en` to the address to force one, or use the EN / IT switch at the top.
 
+![Yield Curve Lab: the longest inversion in 36 years ended without a recession](docs/linkedin-cover.png)
+
+## Screenshots
+
+![Top of the page: thesis, key figures and key points](docs/page-top-en.png)
+
+![Figure 1: every monthly yield curve since 1990 as a 3D surface](docs/page-3d-en.png)
+
 ## What it covers
 
 | Section | Concept |
@@ -60,6 +68,16 @@ python -m pytest
 The tests use synthetic data (no network, no database) and cover the curve-state thresholds, inversion episodes and
 clusters, the lead time between inversion and recession, the Nelson-Siegel fit, the 3-month rate conversion and the
 recession bands.
+
+## Regenerating the images
+
+```bash
+pip install -r requirements-dev.txt
+python -m playwright install chromium
+python docs/make_cover.py                # cover image
+streamlit run app.py &                    # then, with the page running:
+python docs/make_page_screenshots.py     # screenshots of the real page
+```
 
 ## Limitations
 
