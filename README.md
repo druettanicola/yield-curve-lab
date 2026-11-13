@@ -85,6 +85,7 @@ python docs/make_page_screenshots.py     # screenshots of the real page
   12-month windows (standard errors are not shown). It describes the data, it does not forecast.
 - Breakeven inflation includes inflation-risk and liquidity premia. Usable series start in 2006.
 - Before 1993 the 20-year yield does not exist: those values are interpolated.
+- Inversion episodes are runs of consecutive days with the 10Y-2Y spread below zero; runs shorter than 10 days are ignored. Durations are calendar days from the first to the last day of the run.
 - The "flat" band (0 to 0.25 pp) is a convention chosen for this project.
 - For education and portfolio purposes. Not investment advice.
 

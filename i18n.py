@@ -408,6 +408,9 @@ STR = {
     "exp_limits": ("Limitations", "Limiti"),
     "limits_text": (
         "- The 20-year yield does not exist before 1993: earlier values are interpolated between 10 and 30 years.\n"
+        "- Inversion episodes are runs of consecutive days with the 10Y-2Y spread below zero. Runs shorter than 10 days "
+        "are ignored, so brief dips do not count as an inversion. Durations are calendar days from the first to the "
+        "last day of the run.\n"
         "- Thresholds: below 0 inverted, 0 to 0.25 pp flat, above 0.25 pp normal. The 0.25 is a choice made "
         "for this project.\n"
         "- The recession model is estimated in-sample on few recessions, with overlapping windows. It is a "
@@ -415,6 +418,9 @@ STR = {
         "- Breakeven inflation includes risk and liquidity premia.\n"
         "- European series are monthly averages and end at different dates.",
         "- Il rendimento a 20 anni non esiste prima del 1993: i valori precedenti sono interpolati tra 10 e 30 anni.\n"
+        "- Gli episodi di inversione sono serie di giorni consecutivi con lo spread 10Y-2Y sotto zero. Le serie più corte "
+        "di 10 giorni sono ignorate, così i cali brevi non contano come inversione. Le durate sono giorni di calendario, "
+        "dal primo all'ultimo giorno della serie.\n"
         "- Soglie: sotto 0 invertita, da 0 a 0,25 p.p. piatta, sopra 0,25 p.p. normale. Lo 0,25 è una scelta fatta "
         "per questo progetto.\n"
         "- Il modello di recessione è stimato sugli stessi dati, su poche recessioni e con finestre sovrapposte. "
