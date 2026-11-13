@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 from plotly.subplots import make_subplots
 
 import about
@@ -209,7 +208,7 @@ def style_time_chart(fig, index, height: int, hoverformat: str, y: dict | None =
 def show(fig, toolbar: bool = True) -> None:
     """Mostra un grafico Plotly con zoom attivo (toolbar=False nasconde la barra degli strumenti)."""
     config = CHART_CONFIG if toolbar else dict(CHART_CONFIG, displayModeBar=False)
-    st.plotly_chart(fig, use_container_width=True, config=config)
+    st.plotly_chart(fig, config=config)  # larghezza piena: è il comportamento predefinito
 
 
 def base_layout(**kwargs) -> dict:
@@ -571,7 +570,7 @@ def surface_figure(wide, low_date):
     # Il grafico 3D a volte si disegna troppo piccolo al primo caricamento: un evento di "resize" lo
     # costringe a ridimensionarsi. Sugli schermi stretti (telefono) la vista "paesaggio" passa inoltre a
     # una scena più compatta, altrimenti i lati verrebbero tagliati.
-    components.html(
+    st.html(
         f"""<script>
         const compact = {str(view == "landscape").lower()};
         const adapt = () => {{
@@ -584,7 +583,7 @@ def surface_figure(wide, low_date):
         }};
         [400, 1000, 2000, 3500, 6000].forEach(ms => setTimeout(adapt, ms));
         </script>""",
-        height=0,
+        unsafe_allow_javascript=True,
     )
     source("src_treasury")
 

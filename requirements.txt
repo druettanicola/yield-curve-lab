@@ -2,5 +2,5 @@ pandas
 numpy
 scipy
 plotly
-streamlit>=1.40
+streamlit>=1.67,<2
 requests
