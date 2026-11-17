@@ -9,7 +9,10 @@ sono semplici e flessibili.
 
 Tabelle: yields (curva nominale), real_yields (curva reale, TIPS), fred (serie macro).
 """
+import os
+import shutil
 import sqlite3
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -91,9 +94,10 @@ def _refresh_years() -> list[int]:
 
 
 # ------------------------------------------------------------- database ----
-def _connect() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(exist_ok=True)
-    return sqlite3.connect(DB_PATH)
+def _connect(path: Path | None = None) -> sqlite3.Connection:
+    path = path or DB_PATH
+    path.parent.mkdir(exist_ok=True)
+    return sqlite3.connect(path)
 
 
 def _replace_recent(con: sqlite3.Connection, table: str, new_rows: pd.DataFrame, since: str) -> None:
@@ -111,11 +115,11 @@ def build(start_year: int = 1990) -> None:
     print(f"Database creato: {len(data):,} righe, {data['date'].min()} -> {data['date'].max()}")
 
 
-def update() -> None:
+def update(path: Path | None = None) -> None:
     """Riscarica solo gli ultimi due anni e aggiorna le righe (veloce)."""
     years = _refresh_years()
     new = _fetch_years(years, "nominal")
-    with _connect() as con:
+    with _connect(path) as con:
         _replace_recent(con, "yields", new, f"{years[0]}-01-01")
 
 
@@ -130,14 +134,45 @@ def build_macro(start_year: int = 2003) -> None:
     print(f"Dati macro creati: {len(real):,} righe di tassi reali, serie FRED: {FRED_SERIES}")
 
 
-def update_macro() -> None:
+def update_macro(path: Path | None = None) -> None:
     """Aggiorna le serie FRED e gli ultimi due anni dei tassi reali."""
     years = _refresh_years()
     real = _fetch_years(years, "real")
     fred = _fred_all()
-    with _connect() as con:
+    with _connect(path) as con:
         _replace_recent(con, "real_yields", real, f"{years[0]}-01-01")
         fred.to_sql("fred", con, if_exists="replace", index=False)
+
+
+_refresh_lock = threading.Lock()
+
+
+def _refresh_copy() -> bool:
+    """Aggiorna i dati su una COPIA del database e poi la sostituisce in un colpo solo.
+
+    Chi sta leggendo il database in quel momento non vede mai una tabella a metà: o i dati vecchi
+    o quelli nuovi. Se qualcosa va storto (rete assente, sito del Tesoro lento) il database
+    originale resta com'è. Restituisce True se l'aggiornamento è riuscito.
+    """
+    if not _refresh_lock.acquire(blocking=False):
+        return False  # un altro aggiornamento è già in corso
+    tmp = DB_PATH.with_name(DB_PATH.name + ".refresh")
+    try:
+        shutil.copyfile(DB_PATH, tmp)
+        update(tmp)
+        update_macro(tmp)
+        os.replace(tmp, DB_PATH)  # sostituzione atomica
+        return True
+    except Exception:
+        return False
+    finally:
+        tmp.unlink(missing_ok=True)
+        _refresh_lock.release()
+
+
+def refresh_in_background() -> None:
+    """Fa partire l'aggiornamento dei dati in secondo piano: la pagina non aspetta il download."""
+    threading.Thread(target=_refresh_copy, name="data-refresh", daemon=True).start()
 
 
 def macro_exists() -> bool:

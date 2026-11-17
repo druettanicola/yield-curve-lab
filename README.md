@@ -55,8 +55,7 @@ python db.py              # first time only: downloads the history and builds da
 streamlit run app.py
 ```
 
-On start-up the app refreshes the data only if the latest Treasury date is more than four days old, so it opens fast.
-A refresh re-downloads the last two calendar years, so nothing is lost at the turn of the year.
+The app opens at once with the saved data. If the latest Treasury date is two or more days old, it refreshes the data in the background (on a copy of the database, swapped in atomically, so a failed download never breaks the page). A refresh re-downloads the last two calendar years, so nothing is lost at the turn of the year.
 
 ## Tests
 

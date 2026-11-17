@@ -256,28 +256,25 @@ def state_label(state: str) -> str:
 # ---------------------------------------------------------------- dati ----
 @st.cache_resource(ttl=6 * 3600)
 def prepare_database() -> None:
-    """Crea il database se manca; lo aggiorna solo se i dati hanno più di 4 giorni (così l'avvio è veloce)."""
+    """Prepara il database.
+
+    - Primo avvio (database assente): lo costruisce e aspetta, perché senza dati non c'è pagina.
+    - Avvii successivi: parte subito con i dati già salvati e, se hanno 2 o più giorni, li aggiorna
+      in secondo piano. Chi apre la pagina non aspetta il download.
+    """
     latest = db.latest_date()
-    if latest is not None and db.macro_exists() and (pd.Timestamp.today().normalize() - latest).days <= 4:
-        return
-    try:
-        if db.exists():
-            db.update()
-        else:
-            db.build()
-    except Exception:
-        if not db.exists():
-            raise  # senza database non possiamo partire; con uno vecchio sì
-    try:
-        if db.macro_exists():
-            db.update_macro()
-        else:
+    if latest is None:
+        db.build()
+    if not db.macro_exists():
+        try:
             db.build_macro()
-    except Exception:
-        pass  # i dati macro sono un extra: la pagina funziona anche senza
+        except Exception:
+            pass  # i dati macro sono un extra: la pagina funziona anche senza
+    elif latest is not None and (pd.Timestamp.today().normalize() - latest).days >= 2:
+        db.refresh_in_background()
 
 
-@st.cache_data(ttl=6 * 3600)
+@st.cache_data(ttl=3600)
 def load_all():
     prepare_database()
     wide, spread = an.load_wide(), an.load_spread()
