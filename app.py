@@ -721,7 +721,7 @@ def credit_section(macro):
     source("src_hy")
     stats_row([
         (t("st_hy", date=fd(hy.index[-1], "%d %b %Y")), t("pp_unit", v=n(hy.iloc[-1]))),
-        (t("st_hy_range", date=fd(hy.index[0], "%b %Y")), f"{n(hy.min())} - {n(hy.max())} pp"),
+        (t("st_hy_range", date=fd(hy.index[0], "%b %Y")), t("pp_unit", v=f"{n(hy.min())} - {n(hy.max())}")),
     ])
     st.markdown("<p class='note'>" + t("hy_note", start=fd(hy.index[0], "%B %Y"), lo=n(hy.min()), hi=n(hy.max()))
                 + "</p>", unsafe_allow_html=True)
