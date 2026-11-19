@@ -96,3 +96,52 @@ def test_recession_bands_from_indicator(monkeypatch):
     usrec.loc["2001-03-01":"2001-05-01"] = 1
     monkeypatch.setattr(an, "load_fred", lambda series: usrec)
     assert an.recession_bands(since="1999-01-01") == [("2001-03-01", "2001-05-31")]
+
+
+# --- probit e confronto tra spread di credito e di scadenza --------------------------------------------
+def make_probit_data(n=600, seed=0):
+    """Dati sintetici: la probabilita' di y=1 scende quando x sale (come per lo spread di scadenza)."""
+    rng = np.random.default_rng(seed)
+    x = rng.normal(0.5, 1.2, n)
+    from scipy.stats import norm
+    y = (rng.random(n) < norm.cdf(-0.7 - 0.6 * x)).astype(float)
+    return x.reshape(-1, 1), y
+
+
+def test_probit_fit_recovers_the_coefficients():
+    X, y = make_probit_data()
+    fit = an._probit_fit(X, y)
+    c0, c1 = fit["params"]
+    assert c0 == pytest.approx(-0.7, abs=0.2)
+    assert c1 == pytest.approx(-0.6, abs=0.15)
+    assert 0.6 < fit["auc"] < 1.0
+    assert 0.0 < fit["mcfadden"] < 1.0
+
+
+def test_probit_fit_with_a_useless_variable_is_a_coin_flip():
+    rng = np.random.default_rng(1)
+    X = rng.normal(size=(800, 1))
+    y = (rng.random(800) < 0.2).astype(float)  # y non dipende da X
+    fit = an._probit_fit(X, y)
+    assert fit["auc"] == pytest.approx(0.5, abs=0.07)
+    assert fit["mcfadden"] < 0.02
+
+
+def test_credit_models_compare_models_on_the_same_months(monkeypatch):
+    idx = pd.date_range("1960-01-01", periods=240, freq="MS")
+    rng = np.random.default_rng(2)
+    gs10 = pd.Series(4 + rng.normal(0, 0.5, 240), index=idx)
+    tb3 = pd.Series(3 + rng.normal(0, 0.5, 240), index=idx)
+    baa = gs10 + 1.5 + rng.normal(0, 0.2, 240)
+    usrec = pd.Series((rng.random(240) < 0.15).astype(float), index=idx)
+    series = {"GS10": gs10, "TB3MS": tb3, "BAA": baa, "USREC": usrec}
+    monkeypatch.setattr(an, "load_fred", lambda name: series[name])
+
+    result = an.credit_models(horizons=(0, 12))
+    assert [r["h"] for r in result["rows"]] == [0, 12]
+    for row in result["rows"]:
+        assert set(row) >= {"term", "credit", "both", "n", "recessions"}
+        assert 0.0 <= row["both"]["auc"] <= 1.0
+    # con 12 mesi di anticipo si perdono gli ultimi 12 mesi di osservazioni
+    assert result["rows"][0]["n"] - result["rows"][1]["n"] == 12
+    assert result["credit_now"] == pytest.approx(float((baa - gs10).iloc[-1]))

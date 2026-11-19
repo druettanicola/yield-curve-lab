@@ -270,7 +270,12 @@ def prepare_database() -> None:
             db.build_macro()
         except Exception:
             pass  # i dati macro sono un extra: la pagina funziona anche senza
-    elif latest is not None and (pd.Timestamp.today().normalize() - latest).days >= 2:
+    elif not db.fred_complete():
+        try:
+            db.update_fred()  # database creato prima delle serie sul credito: le aggiunge una volta sola
+        except Exception:
+            pass
+    if db.macro_exists() and latest is not None and (pd.Timestamp.today().normalize() - latest).days >= 2:
         db.refresh_in_background()
 
 
@@ -289,6 +294,11 @@ def load_all():
             macro["europe"] = an.load_europe()
         except Exception:
             macro["europe"] = None  # database creato prima delle serie europee
+        try:
+            macro["credit"] = an.credit_models()
+            macro["high_yield"] = an.load_high_yield(wide)
+        except Exception:
+            macro["credit"] = None  # database creato prima delle serie sul credito
     return wide, spread, macro
 
 
@@ -655,13 +665,75 @@ def probit_section(macro, last_date):
     )
 
 
+def credit_section(macro):
+    cm, hy = macro["credit"], macro["high_yield"]
+    data, rows = cm["data"], {r["h"]: r for r in cm["rows"]}
+    nrec = len(macro["bands_long"])  # recessioni NBER dal 1960 (non i mesi di recessione)
+    # figura 4: i due spread nel tempo
+    section(t("h_credit"), t("s_credit_cap", start=data.index[0].year))
+    figure_title("fig4")
+    fig = go.Figure()
+    for col, key, color, width in [("term", "cr_term", BLUE, 1.6), ("credit", "cr_credit", AMBER, 2.0)]:
+        fig.add_trace(go.Scatter(x=data.index, y=data[col], name=t(key), line=dict(color=color, width=width),
+                                 hovertemplate="%{y:+.2f} pp<extra></extra>"))
+    add_bands(fig, macro["bands_long"])
+    style_time_chart(fig, data.index, 380, "%Y-%m", y=dict(title=t("pp_title")))
+    show(fig)
+    source("src_credit")
+
+    # figura 5: AUC dei tre modelli, per orizzonte
+    figure_title("fig5")
+    horizons = sorted(rows)
+    labels = [t("hz_0") if h == 0 else t("hz_n", h=h) for h in horizons]
+    fig = go.Figure()
+    for model, key, color in [("term", "auc_term", BLUE), ("credit", "auc_credit", AMBER), ("both", "auc_both", "#d7d7d2")]:
+        values = [rows[h][model]["auc"] for h in horizons]
+        fig.add_trace(go.Bar(x=labels, y=values, name=t(key), marker_color=color, text=[n(v) for v in values],
+                             textposition="outside", textfont=dict(color=MUTED, size=11),
+                             hovertemplate="%{y:.2f}<extra>" + t(key) + "</extra>"))
+    fig.add_hline(y=0.5, line=dict(color="rgba(255,255,255,0.30)", width=1, dash="dot"))
+    fig.update_layout(
+        **base_layout(height=360, barmode="group", margin=dict(l=10, r=10, t=56, b=10),
+                      legend=dict(orientation="h", y=1.02, yanchor="bottom", x=0, font=dict(color=MUTED))),
+        **xy_axes(y=dict(title=t("auc_y"), range=[0.4, 0.95])),
+    )
+    show(fig, toolbar=False)
+    source("src_credit")
+    r12, r0 = rows[12], rows[0]
+    stats_row([
+        (t("st_credit", date=fd(cm["credit_now_date"], "%b %Y")), t("pp_unit", v=n(cm["credit_now"]))),
+        (t("st_credit_avg", year=data.index[0].year), t("pp_unit", v=n(cm["credit_mean"]))),
+        (t("st_auc12_term"), n(r12["term"]["auc"])), (t("st_auc12_credit"), n(r12["credit"]["auc"])),
+        (t("st_auc12_both"), n(r12["both"]["auc"])),
+    ])
+    st.markdown("<p class='note'>" + t(
+        "credit_note", start=data.index[0].year, nrec=nrec, t12=n(r12["term"]["auc"]), c12=n(r12["credit"]["auc"]),
+        b12=n(r12["both"]["auc"]), t0=n(r0["term"]["auc"]), c0=n(r0["credit"]["auc"])) + "</p>",
+        unsafe_allow_html=True)
+
+    # figura 6: junk bond contro T-bill a 3 mesi (ultimi 3 anni)
+    figure_title("fig6")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=hy.index, y=hy, name=t("hy_series"), line=dict(color=AMBER, width=2),
+                             hovertemplate="%{y:.2f} pp<extra></extra>"))
+    style_time_chart(fig, hy.index, 340, "%Y-%m-%d", y=dict(title=t("pp_title")))
+    show(fig)
+    source("src_hy")
+    stats_row([
+        (t("st_hy", date=fd(hy.index[-1], "%d %b %Y")), t("pp_unit", v=n(hy.iloc[-1]))),
+        (t("st_hy_range", date=fd(hy.index[0], "%b %Y")), f"{n(hy.min())} - {n(hy.max())} pp"),
+    ])
+    st.markdown("<p class='note'>" + t("hy_note", start=fd(hy.index[0], "%B %Y"), lo=n(hy.min()), hi=n(hy.max()))
+                + "</p>", unsafe_allow_html=True)
+
+
 def policy_section(macro, bands):
     pol = macro["policy"]
     pol = pol[pol.index >= "1990-01-01"]
     last = pol.iloc[-1]
     sahm_now = last["sahm"]
     section(t("h_fed"), t("s4_cap"))
-    figure_title("fig4")
+    figure_title("fig7")
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.05, row_heights=[0.42, 0.30, 0.28])
     fig.add_trace(go.Scatter(x=pol.index, y=pol["fed_funds"], name=t("ff_rate"), line=dict(color=AMBER, width=2),
                              hovertemplate="%{y:.2f}%<extra>Fed funds</extra>"), row=1, col=1)
@@ -702,7 +774,7 @@ def inflation_section(macro):
     last = be.iloc[-1]
     low_date = be["be_10"].idxmin()
     section(t("h_infl"), t("s5_cap", low=n(be.loc[low_date, "be_10"]), date=fd(low_date)))
-    figure_title("fig5")
+    figure_title("fig8")
     col_left, col_right = st.columns([2.6, 1])
     with col_left:
         fig = go.Figure()
@@ -745,8 +817,8 @@ def europe_section(macro):
                             post_peak=n(post.max()), post_date=fd(post.idxmax()),
                             last_date=fd(it.index[-1]), now=n(it.iloc[-1])))
 
-    # --- Figura 6: rendimenti a 10 anni
-    figure_title("fig6")
+    # --- Figura 9: rendimenti a 10 anni
+    figure_title("fig9")
     fig = go.Figure()
     for col, name, color, width in [("de10", t("eu_de"), "#f4f4f2", 1.8), ("it10", t("eu_it"), AMBER, 2.2),
                                     ("us10", t("eu_us"), BLUE, 1.6)]:
@@ -757,8 +829,8 @@ def europe_section(macro):
     show(fig)
     source("src_europe")
 
-    # --- Figura 7: spread contro il Bund
-    figure_title("fig7")
+    # --- Figura 10: spread contro il Bund
+    figure_title("fig10")
     fig = go.Figure()
     for col, name, color, width in [("fr_de", t("eu_spread_fr"), "#8c9097", 1.2), ("es_de", t("eu_spread_es"), PURPLE, 1.4),
                                     ("it_de", t("eu_spread_it"), AMBER, 2.4)]:
@@ -774,8 +846,8 @@ def europe_section(macro):
     show(fig)
     source("src_europe")
 
-    # --- Figura 8: pendenza della curva, USA contro Germania / area euro
-    figure_title("fig8")
+    # --- Figura 11: pendenza della curva, USA contro Germania / area euro
+    figure_title("fig11")
     fig = go.Figure()
     for col, name, color, width in [("term_us", t("eu_term_us"), BLUE, 1.8), ("term_de", t("eu_term_de"), "#f4f4f2", 1.8)]:
         s = eu[col].dropna()
@@ -895,6 +967,8 @@ reading_guide(float(spread.iloc[-1]["y10"]))
 curve_section(wide, spread, bands)
 if macro:
     probit_section(macro, wide.index[-1])
+    if macro.get("credit") is not None:
+        credit_section(macro)
     policy_section(macro, bands)
     inflation_section(macro)
     if macro.get("europe") is not None:

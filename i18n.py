@@ -131,15 +131,15 @@ STR = {
              "Figura 2. Spread tra il rendimento a 10 e a 2 anni, dati giornalieri"),
     "fig3": ("Figure 3. Probability of a recession 12 months ahead, Estrella-Mishkin probit",
              "Figura 3. Probabilità di recessione tra 12 mesi, probit di Estrella-Mishkin"),
-    "fig4": ("Figure 4. Fed funds rate and CPI inflation; real policy rate; Sahm rule indicator",
-             "Figura 4. Fed funds e inflazione CPI; tasso reale di politica monetaria; regola di Sahm"),
-    "fig5": ("Figure 5. Market-implied inflation: breakeven and 5y5y forward",
-             "Figura 5. Inflazione implicita nel mercato: breakeven e 5y5y forward"),
-    "fig6": ("Figure 6. 10-year government bond yields", "Figura 6. Rendimenti dei titoli di Stato a 10 anni"),
-    "fig7": ("Figure 7. Spread against the Bund, 10-year bonds",
-             "Figura 7. Spread rispetto al Bund, titoli a 10 anni"),
-    "fig8": ("Figure 8. Slope of the curve, 10-year minus 3-month: United States and euro area",
-             "Figura 8. Pendenza della curva, 10 anni meno 3 mesi: Stati Uniti e area euro"),
+    "fig7": ("Figure 7. Fed funds rate and CPI inflation; real policy rate; Sahm rule indicator",
+             "Figura 7. Fed funds e inflazione CPI; tasso reale di politica monetaria; regola di Sahm"),
+    "fig8": ("Figure 8. Market-implied inflation: breakeven and 5y5y forward",
+             "Figura 8. Inflazione implicita nel mercato: breakeven e 5y5y forward"),
+    "fig9": ("Figure 9. 10-year government bond yields", "Figura 9. Rendimenti dei titoli di Stato a 10 anni"),
+    "fig10": ("Figure 10. Spread against the Bund, 10-year bonds",
+             "Figura 10. Spread rispetto al Bund, titoli a 10 anni"),
+    "fig11": ("Figure 11. Slope of the curve, 10-year minus 3-month: United States and euro area",
+             "Figura 11. Pendenza della curva, 10 anni meno 3 mesi: Stati Uniti e area euro"),
     "src_treasury": ("Source: U.S. Department of the Treasury (par yield curve); author's calculations.",
                      "Fonte: U.S. Department of the Treasury (par yield curve); elaborazione dell'autore."),
     "src_probit": ("Source: FRED (GS10, TB3MS, USREC); NBER recession dates; author's estimates.",
@@ -249,6 +249,81 @@ STR = {
         "recessioni, stima sugli stessi dati, autocorrelazione dei residui (gli errori standard non sono mostrati) "
         "e una sola variabile esplicativa. Nessun modello basato sulla curva anticipa uno shock come la pandemia "
         "del 2020."),
+
+    # ------------------------------------------------------------ 03b credito
+    "h_credit": ("Does the credit market say the same?", "Il mercato del credito dice la stessa cosa?"),
+    "fig4": ("Figure 4. Credit spread (Baa minus 10-year Treasury) and term spread (10-year minus 3-month), monthly",
+             "Figura 4. Spread di credito (Baa meno Treasury a 10 anni) e spread di scadenza (10 anni meno 3 mesi), "
+             "mensili"),
+    "fig5": ("Figure 5. How well each spread identifies a recession, by horizon (AUC)",
+             "Figura 5. Quanto bene ogni spread riconosce una recessione, per orizzonte (AUC)"),
+    "fig6": ("Figure 6. Junk bond yield minus 3-month Treasury bill, daily",
+             "Figura 6. Rendimento dei junk bond meno T-bill a 3 mesi, dati giornalieri"),
+    "src_credit": ("Source: FRED (BAA, GS10, TB3MS, USREC); NBER recession dates; author's estimates.",
+                   "Fonte: FRED (BAA, GS10, TB3MS, USREC); date delle recessioni NBER; stime dell'autore."),
+    "src_hy": ("Source: FRED (ICE BofA US High Yield Index effective yield, BAMLH0A0HYM2EY); U.S. Treasury; "
+               "author's calculations.",
+               "Fonte: FRED (rendimento effettivo dell'indice ICE BofA US High Yield, BAMLH0A0HYM2EY); Tesoro USA; "
+               "elaborazione dell'autore."),
+    "s_credit_cap": (
+        "The term spread compares two government bonds. A <b>credit spread</b> compares a company with the "
+        "government: it is the extra yield investors demand to lend to firms that could fail, and it tends to "
+        "widen when the economy weakens. Here it is Moody's Baa corporate yield minus the 10-year Treasury yield, "
+        "monthly since {start}. The U.S. high-yield (junk bond) index on FRED covers only the last three years, too "
+        "short to test against recessions, so it has its own chart (Figure 6). Grey bands are NBER recessions.",
+        "Lo spread di scadenza confronta due titoli di Stato. Uno <b>spread di credito</b> confronta un'impresa con "
+        "lo Stato: è il rendimento in più che gli investitori chiedono per prestare a imprese che potrebbero "
+        "fallire, e tende ad allargarsi quando l'economia si indebolisce. Qui è il rendimento delle obbligazioni "
+        "aziendali Baa di Moody's meno il Treasury a 10 anni, mensile dal {start}. L'indice USA dei titoli high "
+        "yield (junk bond) su FRED copre solo gli ultimi tre anni, troppo pochi per metterlo alla prova contro le "
+        "recessioni, quindi ha un grafico a parte (Figura 6). Le fasce grigie sono le recessioni NBER."),
+    "cr_credit": ("Credit spread (Baa - 10Y)", "Spread di credito (Baa - 10Y)"),
+    "cr_term": ("Term spread (10Y - 3M)", "Spread di scadenza (10Y - 3M)"),
+    "auc_term": ("Term spread only", "Solo spread di scadenza"),
+    "auc_credit": ("Credit spread only", "Solo spread di credito"),
+    "auc_both": ("Both spreads", "Entrambi gli spread"),
+    "hz_0": ("Same month", "Stesso mese"),
+    "hz_n": ("{h} months ahead", "{h} mesi dopo"),
+    "auc_y": ("AUC (0.5 = coin flip)", "AUC (0,5 = testa o croce)"),
+    "st_credit": ("Baa - 10Y, {date}", "Baa - 10Y, {date}"),
+    "st_credit_avg": ("average since {year}", "media dal {year}"),
+    "st_auc12_term": ("AUC at 12 months: term", "AUC a 12 mesi: scadenza"),
+    "st_auc12_credit": ("AUC at 12 months: credit", "AUC a 12 mesi: credito"),
+    "st_auc12_both": ("AUC at 12 months: both", "AUC a 12 mesi: entrambi"),
+    "credit_note": (
+        "<b>How to read it.</b> For each horizon, three probit models are fitted on the same months ({start} onward); "
+        "the AUC is the chance that a model ranks a random recession month above a random normal one. Twelve months "
+        "ahead the term spread reaches {t12}, the credit spread {c12}, and using both only moves it to {b12}: in "
+        "this sample the early warning comes from the curve. The credit spread is more informative the closer the "
+        "recession is: in the same month it reaches {c0}, against {t0} for the term spread. A plausible reading is "
+        "that credit stress shows up once the economy is already weakening, while an inverted curve reflects what "
+        "markets expect from policy. Baa is the lowest investment-grade rating, not junk; and a Baa minus 3-month "
+        "spread would mix the term spread back in, which is why the 10-year Treasury is used. Limits: {nrec} "
+        "recessions, in-sample fit, overlapping windows, no standard errors.",
+        "<b>Come leggerlo.</b> Per ogni orizzonte sono stimati tre modelli probit sugli stessi mesi (dal {start} in "
+        "poi); l'AUC è la probabilità che un modello assegni un valore più alto a un mese di recessione che a un "
+        "mese normale scelti a caso. A 12 mesi lo spread di scadenza arriva a {t12}, quello di credito a {c12}, e "
+        "usarli insieme porta solo a {b12}: in questo campione il segnale d'allarme anticipato viene dalla curva. "
+        "Lo spread di credito è più informativo quanto più la recessione è vicina: nello stesso mese arriva a "
+        "{c0}, contro {t0} dello spread di scadenza. Una lettura plausibile è che lo stress sul credito compaia "
+        "quando l'economia si sta già indebolendo, mentre una curva invertita riflette ciò che i mercati si "
+        "aspettano dalla politica monetaria. Baa è il rating più basso tra quelli investment grade, non è junk; e "
+        "uno spread Baa meno 3 mesi rimetterebbe dentro lo spread di scadenza, per questo si usa il Treasury a 10 "
+        "anni. Limiti: {nrec} recessioni, stima sugli stessi dati, finestre sovrapposte, nessun errore "
+        "standard."),
+    "hy_series": ("High yield minus 3M T-bill", "High yield meno T-bill a 3 mesi"),
+    "st_hy": ("High yield - 3M, {date}", "High yield - 3M, {date}"),
+    "st_hy_range": ("range since {date}", "intervallo da {date}"),
+    "hy_note": (
+        "<b>Junk bonds today.</b> Effective yield of the ICE BofA U.S. High Yield index minus the 3-month Treasury "
+        "bill yield, as a measure of how much extra yield the market asks to lend to the riskiest firms. Since "
+        "{start} it has moved between {lo} and {hi} percentage points. There was no recession in this window, so "
+        "the series cannot be tested against recessions: that is why the model comparison above uses Baa.",
+        "<b>I junk bond oggi.</b> Rendimento effettivo dell'indice ICE BofA U.S. High Yield meno il rendimento "
+        "del T-bill a 3 mesi, per misurare quanto rendimento in più chiede il mercato per prestare alle imprese "
+        "più rischiose. Dal {start} si è mosso tra {lo} e {hi} punti percentuali. In questa finestra non ci sono "
+        "state recessioni, quindi la serie non può essere messa alla prova contro le recessioni: per questo il "
+        "confronto tra modelli qui sopra usa Baa."),
 
     # ------------------------------------------------------ 04 politica monetaria
     "s4_cap": (
@@ -394,6 +469,7 @@ STR = {
         "- **Macro series**: FRED, Federal Reserve Bank of St. Louis: federal funds rate (FEDFUNDS), CPI "
         "(CPIAUCSL), unemployment rate (UNRATE), the NBER recession indicator (USREC) and, for the recession "
         "model, the monthly 10-year (GS10) and 3-month (TB3MS) yields since 1960.\n"
+        "- **Credit**: Moody's Baa corporate bond yield (BAA) and the ICE BofA U.S. High Yield index yield (BAMLH0A0HYM2EY), via FRED.\n"
         "- **Europe**: OECD long-term government bond yields and 3-month interbank rates, via FRED.\n"
         "- Everything is stored in SQLite and queried with SQL. The spread chart comes from this query:",
         "- **Curva dei rendimenti**: par yield curve giornaliera del Dipartimento del Tesoro USA (dal 1990 a oggi).\n"
@@ -402,6 +478,8 @@ STR = {
         "- **Serie macro**: FRED, Federal Reserve Bank di St. Louis: tasso sui Fed funds (FEDFUNDS), CPI "
         "(CPIAUCSL), tasso di disoccupazione (UNRATE), indicatore di recessione NBER (USREC) e, per il modello "
         "di recessione, i rendimenti mensili a 10 anni (GS10) e a 3 mesi (TB3MS) dal 1960.\n"
+        "- **Credito**: rendimento delle obbligazioni aziendali Baa di Moody's (BAA) e dell'indice ICE BofA U.S. High "
+        "Yield (BAMLH0A0HYM2EY), tramite FRED.\n"
         "- **Europa**: rendimenti dei titoli di Stato a lungo termine e tassi interbancari a 3 mesi dell'OCSE, "
         "tramite FRED.\n"
         "- Tutto è salvato in SQLite e interrogato con SQL. Il grafico dello spread nasce da questa query:"),
@@ -416,6 +494,8 @@ STR = {
         "- The recession model is estimated in-sample on few recessions, with overlapping windows. It is a "
         "description of the data, not a forecast.\n"
         "- Breakeven inflation includes risk and liquidity premia.\n"
+        "- The credit comparison uses the Baa yield (investment grade), not junk bonds: the high-yield series on FRED "
+        "starts in November 2023 and cannot be tested against recessions.\n"
         "- European series are monthly averages and end at different dates.",
         "- Il rendimento a 20 anni non esiste prima del 1993: i valori precedenti sono interpolati tra 10 e 30 anni.\n"
         "- Gli episodi di inversione sono serie di giorni consecutivi con lo spread 10Y-2Y sotto zero. Le serie più corte "
@@ -426,6 +506,8 @@ STR = {
         "- Il modello di recessione è stimato sugli stessi dati, su poche recessioni e con finestre sovrapposte. "
         "Descrive i dati, non è una previsione.\n"
         "- L'inflazione breakeven include premi per il rischio e per la liquidità.\n"
+        "- Il confronto sul credito usa il rendimento Baa (investment grade), non i junk bond: la serie high yield "
+        "su FRED parte a novembre 2023 e non può essere messa alla prova contro le recessioni.\n"
         "- Le serie europee sono medie mensili e finiscono in date diverse."),
 
     # --------------------------------------------------------- chi sono e piè di pagina

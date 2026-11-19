@@ -60,3 +60,14 @@ def test_only_one_refresh_runs_at_a_time(fake_db, monkeypatch):
         assert called == []
     finally:
         db._refresh_lock.release()
+
+
+def test_fred_complete_detects_missing_series(fake_db):
+    with sqlite3.connect(fake_db) as con:
+        con.execute("CREATE TABLE real_yields (date TEXT)")
+        con.execute("CREATE TABLE fred (series TEXT, date TEXT, value REAL)")
+        con.executemany("INSERT INTO fred VALUES (?, '2026-01-01', 1.0)", [(s,) for s in db.FRED_SERIES[:-1]])
+    assert db.fred_complete() is False  # manca l'ultima serie (database creato prima di aggiungerla)
+    with sqlite3.connect(fake_db) as con:
+        con.execute("INSERT INTO fred VALUES (?, '2026-01-01', 1.0)", (db.FRED_SERIES[-1],))
+    assert db.fred_complete() is True

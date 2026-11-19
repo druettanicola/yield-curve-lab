@@ -244,6 +244,31 @@ def bond_equivalent_to_discount(rate_pct: float, days: int = 91) -> float:
     return 360 * y / (365 + days * y) * 100
 
 
+def _probit_fit(X: np.ndarray, y: np.ndarray, x0=None) -> dict:
+    """Probit per massima verosimiglianza: P(y=1) = Phi(c0 + c1*X1 + c2*X2 ...).
+
+    X e' la matrice delle variabili esplicative (una colonna per variabile, senza la costante).
+    Restituisce i coefficienti (costante per prima), il McFadden R2 e l'AUC, cioe' la probabilita'
+    che il modello dia un valore piu' alto a un mese pre-recessione che a un mese normale.
+    """
+    X1 = np.column_stack([np.ones(len(X)), X])
+
+    def neg_log_likelihood(params):
+        p = np.clip(norm.cdf(X1 @ params), 1e-9, 1 - 1e-9)
+        return -np.sum(y * np.log(p) + (1 - y) * np.log(1 - p))
+
+    start = np.zeros(X1.shape[1]) if x0 is None else np.asarray(x0, dtype=float)
+    result = minimize(neg_log_likelihood, x0=start, method="BFGS")
+    null_params = np.zeros(X1.shape[1])
+    null_params[0] = norm.ppf(y.mean())
+    mcfadden = 1 - (-result.fun) / (-neg_log_likelihood(null_params))  # miglioramento su "nessuna informazione"
+
+    ranks = rankdata(norm.cdf(X1 @ result.x))
+    n1, n0 = int(y.sum()), int(len(y) - y.sum())
+    auc = float((ranks[y == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+    return {"params": result.x, "mcfadden": float(mcfadden), "auc": auc}
+
+
 def recession_probit(wide: pd.DataFrame, horizon: int = 12, start: str = "1960-01-01") -> dict:
     """Modello probit di Estrella-Mishkin (1996), lo stesso schema usato dalla Fed di New York.
 
@@ -264,18 +289,9 @@ def recession_probit(wide: pd.DataFrame, horizon: int = 12, start: str = "1960-0
 
     x, y = data["spread"].to_numpy(), data["y"].to_numpy()
 
-    def neg_log_likelihood(params):
-        p = np.clip(norm.cdf(params[0] + params[1] * x), 1e-9, 1 - 1e-9)
-        return -np.sum(y * np.log(p) + (1 - y) * np.log(1 - p))
-
-    result = minimize(neg_log_likelihood, x0=[0.0, -0.5], method="BFGS")
-    a, b = result.x
-    null_ll = -neg_log_likelihood([norm.ppf(y.mean()), 0.0])
-    mcfadden = 1 - (-result.fun) / null_ll  # quanto il modello migliora rispetto a "nessuna informazione"
-
-    ranks = rankdata(norm.cdf(a + b * x))  # AUC: capacità di separare mesi pre-recessione dagli altri
-    n1, n0 = int(y.sum()), int(len(y) - y.sum())
-    auc = float((ranks[y == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+    fit = _probit_fit(x.reshape(-1, 1), y, x0=[0.0, -0.5])
+    a, b = fit["params"]
+    mcfadden, auc = fit["mcfadden"], fit["auc"]
 
     fitted = pd.Series(norm.cdf(a + b * spread_m), index=spread_m.index)
     spread_now = float(wide.iloc[-1][10] - bond_equivalent_to_discount(wide.iloc[-1][0.25]))
@@ -290,6 +306,51 @@ def recession_probit(wide: pd.DataFrame, horizon: int = 12, start: str = "1960-0
         "spread_now": spread_now, "prob_now": float(norm.cdf(a + b * spread_now)),
         "recent_peak": float(recent.max()), "recent_peak_date": recent.idxmax(),
     }
+
+
+def load_credit(start: str = "1960-01-01") -> pd.DataFrame:
+    """Spread di credito e spread di scadenza, mensili.
+
+    credit = rendimento Baa di Moody's - rendimento del Treasury a 10 anni: il premio che le imprese
+             meno solide pagano rispetto allo Stato (serie lunga dal 1919, qui dal 1960).
+    term   = Treasury a 10 anni - Treasury a 3 mesi, lo stesso spread usato dal modello di recessione.
+    """
+    gs10, tb3, baa = load_fred("GS10"), load_fred("TB3MS"), load_fred("BAA")
+    df = pd.DataFrame({"credit": baa - gs10, "term": gs10 - tb3}).dropna()
+    return df[df.index >= start]
+
+
+def credit_models(horizons: tuple[int, ...] = (0, 6, 12)) -> dict:
+    """Confronta tre probit sullo stesso campione: solo spread di scadenza, solo spread di credito, entrambi.
+
+    Per ogni orizzonte h (mesi) la variabile da spiegare e' "il mese t+h e' di recessione NBER".
+    A h = 0 si misura se lo spread descrive la recessione in corso, a h = 12 se la anticipa.
+    """
+    data = load_credit()
+    usrec = load_fred("USREC")
+    models = {"term": ["term"], "credit": ["credit"], "both": ["term", "credit"]}
+    rows = []
+    for h in horizons:
+        d = data.assign(y=usrec.shift(-h).reindex(data.index)).dropna()
+        y = d["y"].to_numpy()
+        row = {"h": h, "n": len(d), "recessions": int(y.sum())}
+        for name, cols in models.items():
+            fit = _probit_fit(d[cols].to_numpy(), y)
+            row[name] = {"auc": fit["auc"], "mcfadden": fit["mcfadden"], "params": fit["params"]}
+        rows.append(row)
+    return {"data": data, "rows": rows, "credit_now": float(data["credit"].iloc[-1]),
+            "credit_now_date": data.index[-1], "credit_mean": float(data["credit"].mean())}
+
+
+def load_high_yield(wide: pd.DataFrame) -> pd.Series:
+    """Rendimento dei junk bond (indice ICE BofA High Yield) meno il Treasury a 3 mesi, giornaliero.
+
+    FRED pubblica questa serie solo per gli ultimi 3 anni: troppo poco per metterla alla prova
+    contro le recessioni, ma utile per vedere come il mercato prezza il rischio di credito oggi.
+    """
+    hy = load_fred("BAMLH0A0HYM2EY")
+    spread = (hy - wide[0.25].reindex(hy.index)).dropna()
+    return spread
 
 
 def load_europe() -> pd.DataFrame:

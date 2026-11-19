@@ -36,6 +36,9 @@ FRED_SERIES = [
     "IRLTLT01DEM156N", "IRLTLT01ITM156N", "IRLTLT01FRM156N", "IRLTLT01ESM156N", "IRLTLT01USM156N",
     # tassi interbancari a 3 mesi (Germania/area euro e USA), per confrontare la pendenza delle curve
     "IR3TIB01DEM156N", "IR3TIB01USM156N",
+    # credito: rendimento delle obbligazioni aziendali Baa di Moody's (mensile, dal 1919) e rendimento
+    # dell'indice ICE BofA High Yield, i "junk bond" (giornaliero; FRED ne dà solo gli ultimi 3 anni)
+    "BAA", "BAMLH0A0HYM2EY",
 ]
 # FEDFUNDS = tasso Fed, CPIAUCSL = prezzi, UNRATE = disoccupazione, USREC = recessioni NBER,
 # GS10 e TB3MS = titoli a 10 anni e a 3 mesi (mensili dal 1953)
@@ -144,6 +147,13 @@ def update_macro(path: Path | None = None) -> None:
         fred.to_sql("fred", con, if_exists="replace", index=False)
 
 
+def update_fred(path: Path | None = None) -> None:
+    """Riscarica solo le serie FRED (poche decine di secondi): serve quando se ne aggiunge una nuova."""
+    fred = _fred_all()
+    with _connect(path) as con:
+        fred.to_sql("fred", con, if_exists="replace", index=False)
+
+
 _refresh_lock = threading.Lock()
 
 
@@ -181,6 +191,15 @@ def macro_exists() -> bool:
     with _connect() as con:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     return {"real_yields", "fred"} <= tables
+
+
+def fred_complete() -> bool:
+    """True se nel database ci sono tutte le serie FRED attuali (un database vecchio può averne meno)."""
+    if not macro_exists():
+        return False
+    with _connect() as con:
+        have = {r[0] for r in con.execute("SELECT DISTINCT series FROM fred")}
+    return set(FRED_SERIES) <= have
 
 
 def exists() -> bool:

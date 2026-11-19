@@ -22,6 +22,7 @@ The page opens in Italian or English depending on the visitor's browser language
 | **Surface** | Every monthly yield curve since 1990 as a rotatable 3D landscape, with labelled events and three camera views |
 | **The signal** | 10Y − 2Y spread, inversion episodes, NBER recessions |
 | **Recession probability** | Estrella-Mishkin (1996) probit on the 10Y − 3M spread, estimated on monthly data since 1960 (nine recessions). Coefficients land close to the published ones; the page shows the current estimate, fit statistics and the current probability |
+| **Credit** | Does the credit market add information? Moody's Baa minus the 10-year Treasury, compared with the term spread in three probit models (term only, credit only, both) at three horizons. The high-yield (junk bond) index minus the 3-month T-bill is shown separately: FRED only provides the last three years |
 | **Monetary policy** | Real policy rate (fed funds − CPI inflation) and the Sahm rule on unemployment |
 | **Inflation expectations** | Fisher equation: nominal = real (TIPS) + breakeven; 5y5y forward inflation = 2 × BE10 − BE5 |
 | **Europe and Italy** | BTP-Bund spread since 1991 (lira era, euro, 2011-12 crisis, “whatever it takes”), Spain and France, and the slope of the curve in the U.S. vs the euro area |
@@ -39,7 +40,7 @@ fetch_data.py -> db.py (SQLite) -> analysis.py -> app.py (Streamlit + Plotly) + 
 ```
 
 - **Data**: U.S. Treasury par yield curve (1990), Treasury real yield curve (TIPS), FRED series
-  (FEDFUNDS, CPIAUCSL, UNRATE, USREC, GS10, TB3MS, plus OECD 10-year yields and 3-month rates for Germany, Italy, France, Spain and the U.S.). All public, no API key.
+  (FEDFUNDS, CPIAUCSL, UNRATE, USREC, GS10, TB3MS, BAA, BAMLH0A0HYM2EY, plus OECD 10-year yields and 3-month rates for Germany, Italy, France, Spain and the U.S.). All public, no API key.
 - **Storage**: SQLite (`yields`, `real_yields`, `fred` tables), queried with SQL joins and aggregations
   (see `queries.sql`).
 - **Analysis**: pandas, SciPy (probit by maximum likelihood, Nelson-Siegel fit), NumPy.
@@ -66,7 +67,7 @@ python -m pytest
 
 The tests use synthetic data (no network, no database) and cover the curve-state thresholds, inversion episodes and
 clusters, the lead time between inversion and recession, the Nelson-Siegel fit, the 3-month rate conversion and the
-recession bands.
+recession bands, the probit fit and the comparison of the term and credit models.
 
 ## Regenerating the images
 
@@ -82,6 +83,7 @@ python docs/make_page_screenshots.py     # screenshots of the real page
 
 - The recession model is estimated in-sample with one explanatory variable, few recessions and overlapping
   12-month windows (standard errors are not shown). It describes the data, it does not forecast.
+- The credit comparison uses the Baa yield (investment grade), not junk bonds: the high-yield series on FRED starts in November 2023, so it cannot be tested against recessions. In this sample the credit spread adds almost nothing at 12 months and is more informative close to the recession.
 - Breakeven inflation includes inflation-risk and liquidity premia. Usable series start in 2006.
 - Before 1993 the 20-year yield does not exist: those values are interpolated.
 - Inversion episodes are runs of consecutive days with the 10Y-2Y spread below zero; runs shorter than 10 days are ignored. Durations are calendar days from the first to the last day of the run.
